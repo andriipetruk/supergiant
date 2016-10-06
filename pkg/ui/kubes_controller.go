@@ -7,6 +7,7 @@ import (
 	"github.com/supergiant/supergiant/pkg/model"
 )
 
+//NewKube holds default inffo for the UI kubes object.
 func NewKube(sg *client.Client, w http.ResponseWriter, r *http.Request) error {
 
 	// TODO we shouldn't use a map for the model, because attr ordering is screwed
@@ -17,6 +18,26 @@ func NewKube(sg *client.Client, w http.ResponseWriter, r *http.Request) error {
 	switch r.URL.Query().Get("option") {
 	// case "aws":
 	case "digitalocean":
+		m = map[string]interface{}{
+			"cloud_account_name": "",
+			"name":               "",
+			"master_node_size":   "1gb",
+			"node_sizes": []string{
+				"1gb",
+				"2gb",
+				"4gb",
+				"8gb",
+				"16gb",
+				"32gb",
+				"48gb",
+				"64gb",
+			},
+			"digitalocean_config": map[string]interface{}{
+				"region":              "nyc1",
+				"ssh_key_fingerprint": "",
+			},
+		}
+	case "openstack":
 		m = map[string]interface{}{
 			"cloud_account_name": "",
 			"name":               "",

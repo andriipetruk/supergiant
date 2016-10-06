@@ -47,6 +47,9 @@ type Kube struct {
 	DigitalOceanConfig     *DOKubeConfig `json:"digitalocean_config,omitempty" gorm:"-" sg:"store_as_json_in=DigitalOceanConfigJSON,immutable"`
 	DigitalOceanConfigJSON []byte        `json:"-"`
 
+	OpenStackConfig     *OSKubeConfig `json:"openstack_config,omitempty" gorm:"-" sg:"store_as_json_in=OpenStackConfigJSON,immutable"`
+	OpenStackConfigJSON []byte        `json:"-"`
+
 	MasterPublicIP string `json:"master_public_ip" sg:"readonly"`
 
 	Ready bool `json:"ready" sg:"readonly" gorm:"index"`
@@ -73,6 +76,14 @@ type AWSKubeConfig struct {
 
 // DOKubeConfig holds do specific information about DO based KUbernetes clusters.
 type DOKubeConfig struct {
+	Region            string `json:"region" validate:"nonzero"`
+	SSHKeyFingerprint string `json:"ssh_key_fingerprint" validate:"nonzero"`
+
+	MasterID int `json:"master_id" sg:"readonly"`
+}
+
+// OSKubeConfig holds do specific information about Open Stack based KUbernetes clusters.
+type OSKubeConfig struct {
 	Region            string `json:"region" validate:"nonzero"`
 	SSHKeyFingerprint string `json:"ssh_key_fingerprint" validate:"nonzero"`
 
