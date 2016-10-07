@@ -125,6 +125,7 @@ func ListKubes(sg *client.Client, w http.ResponseWriter, r *http.Request) error 
 		"newOptions": map[string]string{
 			"aws":          "AWS",
 			"digitalocean": "DigitalOcean",
+			"openstack":    "OpenStack",
 		},
 		"batchActionPaths": map[string]map[string]string{
 			"Reprovision": map[string]string{

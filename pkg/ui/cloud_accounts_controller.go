@@ -86,7 +86,7 @@ func ListCloudAccounts(sg *client.Client, w http.ResponseWriter, r *http.Request
 		"newOptions": map[string]string{
 			"aws":          "AWS",
 			"digitalocean": "DigitalOcean",
-			"digitalocean": "OpenStack",
+			"openstack":    "OpenStack",
 		},
 		"batchActionPaths": map[string]map[string]string{
 			"Delete": map[string]string{
