@@ -1,8 +1,9 @@
-package digitalocean
+package openstack
 
 import (
 	"github.com/rackspace/gophercloud"
 	"github.com/rackspace/gophercloud/openstack"
+	"github.com/rackspace/gophercloud/openstack/compute/v2/servers"
 	"github.com/supergiant/supergiant/pkg/core"
 	"github.com/supergiant/supergiant/pkg/kubernetes"
 	"github.com/supergiant/supergiant/pkg/model"
@@ -14,9 +15,9 @@ type Provider struct {
 	Client func(*model.Kube) (*gophercloud.ProviderClient, error)
 }
 
-// ValidateAccount Valitades DO account info.
+// ValidateAccount Valitades Open Stack account info.
 func (p *Provider) ValidateAccount(m *model.CloudAccount) error {
-	_, err := p.Client(m)
+	_, err := p.Client(&model.Kube{CloudAccount: m})
 	if err != nil {
 		return err
 	}
@@ -25,6 +26,40 @@ func (p *Provider) ValidateAccount(m *model.CloudAccount) error {
 
 // CreateKube creates a new DO kubernetes cluster.
 func (p *Provider) CreateKube(m *model.Kube, action *core.Action) error {
+
+	// Initialize steps
+	procedure := &core.Procedure{
+		Core:   p.Core,
+		Name:   "Create Kube",
+		Model:  m,
+		Action: action,
+	}
+
+	// Method vars
+
+	// fetch an authenticated provider.
+	authenticatedProvider, err := p.Client(m)
+	if err != nil {
+		return err
+	}
+
+	// Fetch compute client.
+	client, err := openstack.NewComputeV2(authenticatedProvider, gophercloud.EndpointOpts{
+		Region: "RegionOne",
+	})
+
+	// Proceedures
+	procedure.AddStep("Creating Kubernetes Master...", func() error {
+		_, err = servers.Create(client, servers.CreateOpts{
+			Name:       "test",
+			FlavorName: "m1.tiny",
+			ImageName:  "Ubuntu14.04",
+		}).Extract()
+		if err != nil {
+			return err
+		}
+		return nil
+	})
 
 	return nil
 }
@@ -72,6 +107,17 @@ func (p *Provider) ResizeVolume(m *model.Volume, action *core.Action) error {
 	return nil
 }
 
+// WaitForVolumeAvailable waits for DO volume to become available.
+func (p *Provider) WaitForVolumeAvailable(m *model.Volume, action *core.Action) error {
+	return nil
+}
+
+// DeleteVolume deletes a DO volume.
+func (p *Provider) DeleteVolume(m *model.Volume, action *core.Action) error {
+
+	return nil
+}
+
 // CreateEntrypoint creates a new Load Balancer for Kubernetes in DO
 func (p *Provider) CreateEntrypoint(m *model.Entrypoint, action *core.Action) error {
 	return nil
@@ -95,7 +141,7 @@ func (p *Provider) DeleteEntrypointListener(m *model.EntrypointListener, action 
 ////////////////////////////////////////////////////////////////////////////////
 
 // Client creates the client for the provider.
-func Client(kube *model.Kube) (*gophercloud.ServiceClient, error) {
+func Client(kube *model.Kube) (*gophercloud.ProviderClient, error) {
 	opts := gophercloud.AuthOptions{
 		IdentityEndpoint: kube.CloudAccount.Credentials["identity_endpoint"],
 		Username:         kube.CloudAccount.Credentials["username"],
@@ -103,14 +149,7 @@ func Client(kube *model.Kube) (*gophercloud.ServiceClient, error) {
 		TenantID:         kube.CloudAccount.Credentials["tenant_id"],
 	}
 
-	provider, err := openstack.AuthenticatedClient(opts)
-	if err != nil {
-		return nil, err
-	}
-
-	client, err := openstack.NewComputeV2(provider, gophercloud.EndpointOpts{
-		Region: kube.OpenStackConfig.Region,
-	})
+	client, err := openstack.AuthenticatedClient(opts)
 	if err != nil {
 		return nil, err
 	}

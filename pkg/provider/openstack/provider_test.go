@@ -1,4 +1,4 @@
-package digitalocean_test
+package openstack_test
 
 import (
 	"testing"

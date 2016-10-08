@@ -25,7 +25,10 @@ func NewCloudAccount(sg *client.Client, w http.ResponseWriter, r *http.Request) 
 			"name":     "",
 			"provider": "openstack",
 			"credentials": map[string]interface{}{
-				"token": "",
+				"identity_endpoint": "",
+				"username":          "",
+				"password":          "",
+				"tenant_id":         "",
 			},
 		}
 	default: // just default to AWS if option not provided, or mismatched
