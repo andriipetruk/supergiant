@@ -4,6 +4,7 @@ import (
 	"github.com/rackspace/gophercloud"
 	"github.com/rackspace/gophercloud/openstack"
 	"github.com/rackspace/gophercloud/openstack/compute/v2/servers"
+	"github.com/rackspace/gophercloud/pagination"
 	"github.com/supergiant/supergiant/pkg/core"
 	"github.com/supergiant/supergiant/pkg/kubernetes"
 	"github.com/supergiant/supergiant/pkg/model"
@@ -36,7 +37,8 @@ func (p *Provider) CreateKube(m *model.Kube, action *core.Action) error {
 	}
 
 	// Method vars
-
+	masterName := m.Name + "-master"
+	minionName := m.Name + "-minion"
 	// fetch an authenticated provider.
 	authenticatedProvider, err := p.Client(m)
 	if err != nil {
@@ -45,27 +47,78 @@ func (p *Provider) CreateKube(m *model.Kube, action *core.Action) error {
 
 	// Fetch compute client.
 	client, err := openstack.NewComputeV2(authenticatedProvider, gophercloud.EndpointOpts{
-		Region: "RegionOne",
+		Region: m.OpenStackConfig.Region,
 	})
 
 	// Proceedures
+	// Master
 	procedure.AddStep("Creating Kubernetes Master...", func() error {
 		_, err = servers.Create(client, servers.CreateOpts{
-			Name:       "test",
-			FlavorName: "m1.tiny",
-			ImageName:  "Ubuntu14.04",
+			Name:       masterName,
+			FlavorName: m.MasterNodeSize,
+			ImageName:  "CoreOS",
+			Metadata:   map[string]string{"kubernetes-cluster": m.Name, "Role": "master"},
 		}).Extract()
 		if err != nil {
 			return err
 		}
 		return nil
 	})
-
-	return nil
+	// Minion
+	procedure.AddStep("Creating Kubernetes Minion...", func() error {
+		_, err = servers.Create(client, servers.CreateOpts{
+			Name:       minionName,
+			FlavorName: m.MasterNodeSize, // <- Do we need a minion node size? This will work for now.
+			ImageName:  "CoreOS",
+			Metadata:   map[string]string{"kubernetes-cluster": m.Name, "Role": "minion"},
+		}).Extract()
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+	return procedure.Run()
 }
 
 // DeleteKube deletes a DO kubernetes cluster.
 func (p *Provider) DeleteKube(m *model.Kube, action *core.Action) error {
+	// fetch an authenticated provider.
+	authenticatedProvider, err := p.Client(m)
+	if err != nil {
+		return err
+	}
+	// Fetch compute client.
+	client, err := openstack.NewComputeV2(authenticatedProvider, gophercloud.EndpointOpts{
+		Region: m.OpenStackConfig.Region,
+	})
+	opts := servers.ListOpts{Name: ""}
+	pager := servers.List(client, opts)
+
+	var kube []servers.Server
+	// Define an anonymous function to be executed on each page's iteration
+	err = pager.EachPage(func(page pagination.Page) (bool, error) {
+		err := err
+		serverList, err := servers.ExtractServers(page)
+		if err != nil {
+			return false, err
+		}
+
+		for _, s := range serverList {
+			for key, value := range s.Metadata {
+				if key == "kubernetes-cluster" && value == m.Name {
+					kube = append(kube, s)
+				}
+			}
+		}
+		return true, nil
+	})
+	if err != nil {
+		return err
+	}
+
+	for _, s := range kube {
+		_ = servers.Delete(client, s.ID)
+	}
 
 	return nil
 }
