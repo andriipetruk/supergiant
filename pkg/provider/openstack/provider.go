@@ -91,27 +91,9 @@ func (p *Provider) DeleteKube(m *model.Kube, action *core.Action) error {
 	client, err := openstack.NewComputeV2(authenticatedProvider, gophercloud.EndpointOpts{
 		Region: m.OpenStackConfig.Region,
 	})
-	opts := servers.ListOpts{Name: ""}
-	pager := servers.List(client, opts)
 
-	var kube []servers.Server
-	// Define an anonymous function to be executed on each page's iteration
-	err = pager.EachPage(func(page pagination.Page) (bool, error) {
-		err := err
-		serverList, err := servers.ExtractServers(page)
-		if err != nil {
-			return false, err
-		}
-
-		for _, s := range serverList {
-			for key, value := range s.Metadata {
-				if key == "kubernetes-cluster" && value == m.Name {
-					kube = append(kube, s)
-				}
-			}
-		}
-		return true, nil
-	})
+	// Go find all our cluster members.
+	kube, err := clusterGather(client, m)
 	if err != nil {
 		return err
 	}
@@ -208,4 +190,33 @@ func Client(kube *model.Kube) (*gophercloud.ProviderClient, error) {
 	}
 
 	return client, nil
+}
+
+// Gather all cluster members.
+func clusterGather(client *gophercloud.ServiceClient, m *model.Kube) ([]servers.Server, error) {
+	opts := servers.ListOpts{Name: ""}
+	pager := servers.List(client, opts)
+
+	// In this section we gather up all members of our cluster into this slice.
+	var kube []servers.Server
+	// Define an anonymous function to be executed on each page's iteration
+	err := pager.EachPage(func(page pagination.Page) (bool, error) {
+		serverList, err := servers.ExtractServers(page)
+		if err != nil {
+			return false, err
+		}
+
+		for _, s := range serverList {
+			for key, value := range s.Metadata {
+				if key == "kubernetes-cluster" && value == m.Name {
+					kube = append(kube, s)
+				}
+			}
+		}
+		return true, nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return kube, nil
 }
