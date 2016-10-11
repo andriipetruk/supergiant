@@ -182,7 +182,8 @@ func (p *Provider) CreateKube(m *model.Kube, action *core.Action) error {
 		}
 
 		m.OpenStackConfig.MasterID = masterServer.ID
-
+		//m.OpenStackConfig.MasterPrivateIP = masterServer.Addresses
+		fmt.Println("Master Addys:", masterServer.Addresses)
 		return nil
 	})
 
@@ -284,8 +285,27 @@ func (p *Provider) DeleteKube(m *model.Kube, action *core.Action) error {
 		if err != nil {
 			return err
 		}
+		var masterDevID string
+		nodes, err := clusterGather(client, m)
+		if err != nil {
+			return err
+		}
 
-		err = floatingip.Delete(networkClient, floatIP.ID).ExtractErr()
+		for _, node := range nodes {
+			if node.Name == m.Name+"-master" {
+				masterDevID = node.ID
+			}
+		}
+
+		err = floatingip.DisassociateInstance(client, floatingip.AssociateOpts{
+			ServerID:   masterDevID,
+			FloatingIP: floatIP.FloatingIP,
+		}).ExtractErr()
+		if err != nil {
+			return err
+		}
+
+		err = floatingips.Delete(networkClient, floatIP.ID).ExtractErr()
 		if err != nil {
 			if strings.Contains(err.Error(), "404") {
 				// it does not exist,

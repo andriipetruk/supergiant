@@ -585,10 +585,10 @@ write_files:
             timeoutSeconds: 1
 coreos:
   etcd2:
-    advertise-client-urls: http://$public_ipv4:2379
+    advertise-client-urls: http://COREOS_PRIVATE_IPV4:2379
     listen-client-urls: http://0.0.0.0:2379
   flannel:
-    iface: $public_ipv4
+    iface: COREOS_PRIVATE_IPV4
     etcd_endpoints: http://127.0.0.1:2379
   units:
     - name: etcd2.service
@@ -660,7 +660,7 @@ coreos:
          --cluster-dns=10.3.0.10 \
          --cluster_domain=cluster.local \
          --register-node=false \
-         --hostname-override=$public_ipv4
+         --hostname-override=$COREOS_PRIVATE_IPV4
         Restart=on-failure
         RestartSec=5
         [Install]

@@ -87,5 +87,6 @@ type OSKubeConfig struct {
 	Region    string `json:"region" validate:"nonzero"`
 	SSHPubKey string `json:"ssh_pub_key" validate:"nonzero"`
 
-	MasterID string `json:"master_id" sg:"readonly"`
+	MasterPrivateIP string `json:"master_private_ip" sg:"readonly"`
+	MasterID        string `json:"master_id" sg:"readonly"`
 }
