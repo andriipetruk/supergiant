@@ -1,5 +1,6 @@
 #cloud-config
-
+ssh_authorized_keys:
+  - "{ .OpenStackConfig.SSHPubKey }"
 write_files:
   - path: "/opt/bin/download-k8s-binary"
     permissions: "0755"

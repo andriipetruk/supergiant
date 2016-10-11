@@ -84,8 +84,8 @@ type DOKubeConfig struct {
 
 // OSKubeConfig holds do specific information about Open Stack based KUbernetes clusters.
 type OSKubeConfig struct {
-	Region            string `json:"region" validate:"nonzero"`
-	SSHKeyFingerprint string `json:"ssh_key_fingerprint" validate:"nonzero"`
+	Region    string `json:"region" validate:"nonzero"`
+	SSHPubKey string `json:"ssh_pub_key" validate:"nonzero"`
 
-	MasterID int `json:"master_id" sg:"readonly"`
+	MasterID string `json:"master_id" sg:"readonly"`
 }
